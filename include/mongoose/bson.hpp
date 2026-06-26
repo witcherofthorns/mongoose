@@ -302,7 +302,7 @@ void serialize_array_element(bsoncxx::builder::stream::array& array_builder, con
         array_builder << nested_array;
     }
     else {
-        static_assert(always_false_v<T>, "unsupported type in array");
+        static_assert(always_false_v<T>, "bson unsupported type in array");
     }
 }
 
@@ -310,7 +310,7 @@ template<PrimitiveBsonType T>
 T extract_field(const bsoncxx::document::view& doc, std::string_view name) {
     auto element = doc[name];
     if (!element) {
-        throw std::runtime_error(std::string("field not found: ") + std::string(name));
+        throw std::runtime_error(std::string("bson field not found: ") + std::string(name));
     }
     if constexpr (std::is_same_v<T, std::string>) {
         if(element.type() == bsoncxx::type::k_oid){
@@ -340,7 +340,7 @@ T extract_field(const bsoncxx::document::view& doc, std::string_view name) {
         return element.get_oid().value;
     }
     else {
-        static_assert(always_false_v<T>, "unsupported primitive type");
+        static_assert(always_false_v<T>, "bson unsupported primitive type");
     }
 }
 
@@ -349,7 +349,7 @@ T extract_field(const bsoncxx::document::view& doc, std::string_view name) {
     auto element = doc[name];
     if (!element) {
         throw std::runtime_error(
-            std::string("field not found: ") + std::string(name)
+            std::string("bson field not found: ") + std::string(name)
         );
     }
     int32_t value = element.get_int32();
@@ -361,7 +361,7 @@ T extract_field(const bsoncxx::document::view& doc, std::string_view name) {
     auto element = doc[name];
     if (!element) {
         throw std::runtime_error(
-            std::string("field not found: ") + std::string(name)
+            std::string("bson field not found: ") + std::string(name)
         );
     }
     if (element.type() == bsoncxx::type::k_date) {
@@ -371,7 +371,7 @@ T extract_field(const bsoncxx::document::view& doc, std::string_view name) {
         return mongoose::utils::from_bson_date(element.get_int64().value);
     }
     throw std::runtime_error(
-        std::string("bad date format: ") + std::string(name)
+        std::string("bson bad date format: ") + std::string(name)
     );
 }
 
@@ -380,13 +380,13 @@ T extract_field(const bsoncxx::document::view& doc, std::string_view name) {
     auto element = doc[name];
     if (!element) {
         throw std::runtime_error(
-            std::string("field not found: ") + std::string(name)
+            std::string("bson field not found: ") + std::string(name)
         );
     }
 
     if (element.type() != bsoncxx::type::k_binary){
         throw std::runtime_error(
-            std::string("field must be binary: ") + std::string(name)
+            std::string("bson field must be binary: ") + std::string(name)
         );
     }
 
@@ -425,7 +425,7 @@ T extract_field(const bsoncxx::document::view& doc, std::string_view name) {
     size_t i = 0;
     for (const auto& item : array) {
         if(i >= result.size()){
-            throw std::runtime_error("array size mismatch");
+            throw std::runtime_error("bson array size mismatch");
         }
         result[i++] = extract_array_element<std::remove_extent_t<T>>(item);
     }
@@ -454,7 +454,7 @@ template<AggregateStruct T>
 T extract_field(const bsoncxx::document::view& doc, std::string_view name) {
     auto element = doc[name];
     if (!element) {
-        throw std::runtime_error(std::string("nested field not found: ") + std::string(name));
+        throw std::runtime_error(std::string("nested bson field not found: ") + std::string(name));
     }
     auto sub_doc = element.get_document().view();
     return from_bson<T>(sub_doc);
@@ -519,7 +519,7 @@ T extract_array_element(const bsoncxx::array::element& element) {
         return result;
     }
     else {
-        static_assert(always_false_v<T>, "unsupported type in array element");
+        static_assert(always_false_v<T>, "bson unsupported type in array element");
     }
 }
 
@@ -544,39 +544,42 @@ T extract_dispatch(const bsoncxx::document::view& doc, std::string_view name) {
 
 }
 
-// main/used functions
-// and exclude fields functions
+// main serialize/deserialize functions
 namespace mongoose {
 
     template<typename T>
     bsoncxx::document::value to_bson(const T& obj) {
         static_assert(std::is_aggregate_v<T>, "T must be an aggregate type");
+
         auto builder = bsoncxx::builder::stream::document{};
+
         boost::pfr::for_each_field(obj, [&builder](const auto& field, auto index) {
             constexpr std::string_view field_name = boost::pfr::get_name<index(), T>();
             traits::serialize_dispatch(builder, field_name, field);
         });
+
         return builder << bsoncxx::builder::stream::finalize;
     }
 
     template<typename T>
     T from_bson(const bsoncxx::document::view& doc) {
         static_assert(std::is_aggregate_v<T>, "T must be an aggregate type");
+
         T result;
+
         boost::pfr::for_each_field(result, [&doc](auto& field, auto index) {
             constexpr std::string_view field_name = boost::pfr::get_name<index(), T>();
             field = traits::extract_dispatch<std::decay_t<decltype(field)>>(doc, field_name);
         });
+
         return result;
     }
 
     template<typename T, typename... ExcludeFields>
     bsoncxx::document::value to_bson_exclude(const T& obj, ExcludeFields... exclude_fields) {
-        // T want/must be an aggregate type 
-        // struct or object/docuemnt value
         static_assert(std::is_aggregate_v<T>, "T must be an aggregate type");
         static_assert(
-            (std::is_convertible_v<ExcludeFields, std::string_view> && ...), 
+            (std::is_convertible_v<ExcludeFields, std::string_view> && ...),
             "all exclude fields must be convertible to string_view"
         );
         
@@ -584,8 +587,7 @@ namespace mongoose {
         
         boost::pfr::for_each_field(obj, [&](const auto& field, auto index) {
             constexpr std::string_view field_name = boost::pfr::get_name<index(), T>();
-            // check field name
-            // return (skip) loop if contain
+            // check field name, skip loop if contain
             if (details::exclude_contains(field_name, exclude_fields...)) {
                 return;
             }
@@ -597,11 +599,9 @@ namespace mongoose {
 
     template<typename T, typename... ExcludeFields>
     T from_bson_exclude(const bsoncxx::document::view& doc, ExcludeFields... exclude_fields) {
-        // T want/must be an aggregate type 
-        // struct or object/docuemnt value
         static_assert(std::is_aggregate_v<T>, "T must be an aggregate type");
         static_assert(
-            (std::is_convertible_v<ExcludeFields, std::string_view> && ...), 
+            (std::is_convertible_v<ExcludeFields, std::string_view> && ...),
             "all exclude fields must be convertible to string_view"
         );
         
@@ -609,8 +609,7 @@ namespace mongoose {
         
         boost::pfr::for_each_field(result, [&](auto& field, auto index) {
             constexpr std::string_view field_name = boost::pfr::get_name<index(), T>();
-            // check field name
-            // return (skip) loop if contain
+            // check field name, skip loop if contain
             if (details::exclude_contains(field_name, exclude_fields...)) {
                 return;
             }
@@ -620,6 +619,37 @@ namespace mongoose {
         return result;
     }
     
+}
+
+// serialize to projection bson
+namespace mongoose {
+
+    template<typename T, typename... ExcludeFields>
+    bsoncxx::document::value to_projection(ExcludeFields... exclude_fields) {
+        static_assert(std::is_aggregate_v<T>, "T must be an aggregate type");
+        static_assert(
+            (std::is_convertible_v<ExcludeFields, std::string_view> && ...), 
+            "all exclude fields must be convertible to string_view"
+        );
+
+        auto builder = bsoncxx::builder::stream::document{};
+        constexpr std::size_t field_count = boost::pfr::tuple_size_v<T>;
+
+        // fold expression to iterate over indices
+        [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+            ( [&]() {
+                constexpr std::string_view field_name = boost::pfr::get_name<Is, T>();
+                // check field name, skip loop if contain
+                if (!details::exclude_contains(field_name, exclude_fields...)) {
+                    builder << field_name << 1;
+                }
+            }(), ...);
+        }
+        (std::make_index_sequence<field_count>{});
+
+        return builder << bsoncxx::builder::stream::finalize;
+    }
+
 }
 
 #endif

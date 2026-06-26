@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # options
 option(MONGOOSE_BUILD_TESTS "Mongoose build tests" OFF)
 option(MONGOOSE_LINK_MONGO_STATIC "Mongoose static link mongocxx" ON)
-option(MONGOOSE_USE_NLOHMANN_JSON "Mongoose use nlohmann json library" OFF)
+option(MONGOOSE_USE_NLOHMANN_JSON "Mongoose use nlohmann json library" ON)
 
 # check package nlohmann_json
 if(MONGOOSE_USE_NLOHMANN_JSON)

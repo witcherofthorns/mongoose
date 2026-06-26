@@ -42,7 +42,7 @@ namespace mongoose::types::date {
         char delimiter;
         iss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
         if (iss.fail()) {
-            throw std::runtime_error("json failed parse date string: " + iso_str);
+            throw std::runtime_error("failed parse date string: " + iso_str);
         }
 
         // try parse milliseconds

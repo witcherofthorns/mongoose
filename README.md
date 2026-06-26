@@ -82,6 +82,15 @@ auto doc = mongoose::to_bson(user_value);
 auto doc = mongoose::to_bson_exclude(user_value, "_id");
 auto result = collection.insert_one(doc.view());
 ```
+If you need a projection from your struct
+```cpp
+// build BSON project document
+auto doc = mongoose::to_projection<product_cart>();
+
+// set options projection
+mongocxx::options::find options;
+options.projection(doc.view());
+```
 
 ## JSON
 Mongoose supports the `nlohmann_json` library by default and adapts all types specifically for it, as it remains quite popular and flexible, but without being tightly coupled to it. If you need a custom implementation of types for another JSON library, you can do it yourself
