@@ -92,6 +92,28 @@ mongocxx::options::find options;
 options.projection(doc.view());
 ```
 
+## Types
+Mongoose implements its types using aliases on top of native types without creating its own wrappers for them in order not to complicate the overall functionality of the library
+```cpp
+mongoose::date  // chrono::system_clock::time_point
+mongoose::oid   // bsoncxx::oid
+mongoose::uuid  // boost::uuids::uuid
+```
+
+If you build your bson documents manually and need direct conversion of types to bson, you can also use the `to_bson` and `from_bson` methods, except for oid type, since it is already directly native
+
+```cpp
+// $set query for all fields model product
+// and update cached _card doc with updated_at time
+auto update = make_document(
+    kvp("$set", mongoose::to_bson(product)),
+    kvp("$set", make_document(
+        kvp("_card", mongoose::to_bson(card_cached)),
+        kvp("updated_at", mongoose::to_bson(date_now))
+    ))
+);
+```
+
 ## JSON
 Mongoose supports the `nlohmann_json` library by default and adapts all types specifically for it, as it remains quite popular and flexible, but without being tightly coupled to it. If you need a custom implementation of types for another JSON library, you can do it yourself
 

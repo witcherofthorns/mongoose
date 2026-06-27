@@ -48,23 +48,24 @@ namespace mongoose::details {
     }
 }
 
-// namespace mongoose utils
-// internal utils functions
-namespace mongoose::utils {
-    inline bsoncxx::types::b_date to_bson_date(const std::chrono::system_clock::time_point& tp) {
+// namespace mongoose
+// generic adapters functions
+namespace mongoose {
+
+    inline bsoncxx::types::b_date to_bson(const std::chrono::system_clock::time_point& tp) {
         const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             tp.time_since_epoch()
         );
         return bsoncxx::types::b_date{ms};
     }
 
-    inline std::chrono::system_clock::time_point from_bson_date(int64_t date) {
+    inline std::chrono::system_clock::time_point from_bson(int64_t date) {
         return std::chrono::system_clock::time_point{
             std::chrono::milliseconds{date}
         };
     }
 
-    inline bsoncxx::types::b_binary to_bson_uuid(const boost::uuids::uuid& value){
+    inline bsoncxx::types::b_binary to_bson(const boost::uuids::uuid& value){
         return bsoncxx::types::b_binary{
             bsoncxx::binary_sub_type::k_uuid, 
             static_cast<std::uint32_t>(value.size()), 
@@ -72,21 +73,22 @@ namespace mongoose::utils {
         };
     }
 
-    inline boost::uuids::uuid from_bson_uuid(const bsoncxx::types::b_binary& value) {
+    inline boost::uuids::uuid from_bson(const bsoncxx::types::b_binary& value) {
         if (value.sub_type != bsoncxx::binary_sub_type::k_uuid){
             throw std::runtime_error(
-                std::string("field binary not valid for uuid type")
+                std::string("bson uuid field binary not valid")
             );
         }
 
         if (value.size != 16) {
-            throw std::runtime_error("field binary size is not valid for uuid");
+            throw std::runtime_error("bson uuid field binary size is not valid");
         }
 
         boost::uuids::uuid uuid_new;
         std::memcpy(uuid_new.data, value.bytes, 16);
         return uuid_new;
     }
+
 }
 
 // namespace mongoose traits
@@ -230,12 +232,12 @@ void serialize_field_impl(bsoncxx::builder::stream::document& builder, std::stri
 
 template<BsonDateType T>
 void serialize_field_impl(bsoncxx::builder::stream::document& builder, std::string_view name, const T& value) {
-    builder << name << mongoose::utils::to_bson_date(value);
+    builder << name << mongoose::to_bson(value);
 }
 
 template<BsonUuidType T>
 void serialize_field_impl(bsoncxx::builder::stream::document& builder, std::string_view name, const T& value) {
-    builder << name << mongoose::utils::to_bson_uuid(value);
+    builder << name << mongoose::to_bson(value);
 }
 
 template<VectorType T>
@@ -280,7 +282,7 @@ void serialize_array_element(bsoncxx::builder::stream::array& array_builder, con
         array_builder << item;
     }
     else if constexpr (BsonDateType<T>) {
-        array_builder << mongoose::utils::to_bson_date(item);
+        array_builder << mongoose::to_bson(item);
     }
     else if constexpr (is_custom_serializable<T>::value) {
         auto custom_doc = serialize_custom(item);
@@ -365,10 +367,10 @@ T extract_field(const bsoncxx::document::view& doc, std::string_view name) {
         );
     }
     if (element.type() == bsoncxx::type::k_date) {
-        return mongoose::utils::from_bson_date(element.get_date().value.count());
+        return mongoose::from_bson(element.get_date().value.count());
     }
     if (element.type() == bsoncxx::type::k_int64) {
-        return mongoose::utils::from_bson_date(element.get_int64().value);
+        return mongoose::from_bson(element.get_int64().value);
     }
     throw std::runtime_error(
         std::string("bson bad date format: ") + std::string(name)
@@ -390,7 +392,7 @@ T extract_field(const bsoncxx::document::view& doc, std::string_view name) {
         );
     }
 
-    return mongoose::utils::from_bson_uuid(element.get_binary());
+    return mongoose::from_bson(element.get_binary());
 }
 
 
@@ -488,17 +490,17 @@ T extract_array_element(const bsoncxx::array::element& element) {
     }
     else if constexpr (BsonDateType<T>) {
         if (element.type() == bsoncxx::type::k_date) {
-            return mongoose::utils::from_bson_date(element.get_date().value.count());
+            return mongoose::from_bson(element.get_date().value.count());
         }
         if (element.type() == bsoncxx::type::k_int64) {
-            return mongoose::utils::from_bson_date(element.get_int64().value);
+            return mongoose::from_bson(element.get_int64().value);
         }
     }
     else if constexpr (BsonUuidType<T>) {
         if (element.type() == bsoncxx::type::k_binary){
             bsoncxx::types::b_binary binary_value = element.get_binary();
             if (binary_value.sub_type == bsoncxx::binary_sub_type::k_uuid){
-                return mongoose::utils::from_bson_uuid(element.get_binary());
+                return mongoose::from_bson(element.get_binary());
             }
         }
     }

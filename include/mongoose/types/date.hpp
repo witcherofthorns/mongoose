@@ -1,5 +1,5 @@
-#ifndef MONGOOSE_TYPES_DATE_HPP
-#define MONGOOSE_TYPES_DATE_HPP
+#ifndef QUARKPUNK_MONGOOSE_TYPES_DATE_HPP
+#define QUARKPUNK_MONGOOSE_TYPES_DATE_HPP
 
 #include <string>
 #include <chrono>
@@ -66,7 +66,6 @@ namespace mongoose::types::date {
         timepoint += std::chrono::milliseconds(milliseconds);
         return timepoint;
     }
-
 
     // to timestamp
     inline int64_t to_timestamp(const time_point& timepoint) noexcept {
@@ -139,9 +138,7 @@ namespace nlohmann {
     template <>
     struct adl_serializer<mongoose::time_point> {
         static void to_json(json& j, const mongoose::time_point& value) {
-            j = std::chrono::duration_cast<std::chrono::milliseconds>(
-                value.time_since_epoch()
-            ).count();
+            j = mongoose::types::date::to_string(value);
         }
         static void from_json(const json& j, mongoose::time_point& value) {
             try {
@@ -165,4 +162,4 @@ namespace nlohmann {
 }
 
 #endif // MONGOOSE_USE_NLOHMANN_JSON
-#endif // MONGOOSE_TYPES_DATE_HPP
+#endif // QUARKPUNK_MONGOOSE_TYPES_DATE_HPP

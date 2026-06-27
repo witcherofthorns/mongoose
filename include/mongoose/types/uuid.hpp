@@ -1,5 +1,5 @@
-#ifndef MONGOOSE_TYPES_UUID_HPP
-#define MONGOOSE_TYPES_UUID_HPP
+#ifndef QUARKPUNK_MONGOOSE_TYPES_UUID_HPP
+#define QUARKPUNK_MONGOOSE_TYPES_UUID_HPP
 
 #include <string>
 #include <stdexcept>
@@ -35,13 +35,13 @@ namespace mongoose::types::uuid {
             boost::uuids::uuid uuid_new = gen(str);
 
             if (uuid_new.version() == boost::uuids::uuid::version_unknown) {
-                throw std::runtime_error("json bad uuid string format: " + str);
+                throw std::runtime_error("uuid bad string format: " + str);
             }
 
             return uuid_new;
         } 
         catch (const std::exception& e) {
-            throw std::runtime_error("json failed parse uuid string: " + str);
+            throw std::runtime_error("uuid failed parse string: " + str);
         }
     }
 
@@ -93,4 +93,4 @@ namespace nlohmann {
 }
 
 #endif // MONGOOSE_USE_NLOHMANN_JSON
-#endif // MONGOOSE_TYPES_UUID_HPP
+#endif // QUARKPUNK_MONGOOSE_TYPES_UUID_HPP

@@ -1,5 +1,5 @@
-#ifndef MONGOOSE_TYPES_OID_HPP
-#define MONGOOSE_TYPES_OID_HPP
+#ifndef QUARKPUNK_MONGOOSE_TYPES_OID_HPP
+#define QUARKPUNK_MONGOOSE_TYPES_OID_HPP
 
 #include <string>
 #include <stdexcept>
@@ -14,7 +14,7 @@ namespace mongoose::types::oid {
     // from string
     inline object_id from_string(const std::string& str) {
         if(str.size() != 24) {
-            throw std::length_error("json invalid object_id string: " + str);
+            throw std::length_error("object_id invalid string: " + str);
         }
         return bsoncxx::oid{str};
     }
@@ -57,4 +57,4 @@ namespace nlohmann {
 }
 
 #endif // MONGOOSE_USE_NLOHMANN_JSON
-#endif // MONGOOSE_TYPES_OID_HPP
+#endif // QUARKPUNK_MONGOOSE_TYPES_OID_HPP

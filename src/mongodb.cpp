@@ -6,12 +6,18 @@ using bsoncxx::builder::stream::document;
 using bsoncxx::builder::stream::finalize;
 using namespace mongoose;
 
-static mongocxx::instance instance;
+// global mongocxx instance required for driver
+static mongocxx::instance _instance;
 
+// that class destructor is mostly needed to display
+// debug message about the release of class
+// mostly to track the life cycle of class
+// and understand that everything is fine
 mongodb::~mongodb() {
     logger::log(logger::INFO, "mongodb close");
 }
 
+// internal connection ping function
 void mongodb::ping() {
     try {
         auto client = pool.acquire();
